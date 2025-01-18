@@ -1,4 +1,4 @@
-package com.jobtrackr;
+package com.jobtracker;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
