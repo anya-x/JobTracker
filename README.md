@@ -10,7 +10,7 @@ A full-stack application to help job seekers organise and track their job applic
 - Document storage for resumes and cover letters
 
 ## Tech Stack
-- **Backend**: Java 17, Spring Boot, PostgreSQL
+- **Backend**: Java 21, Spring Boot, PostgreSQL
 - **Frontend**: React, Tailwind CSS
 - **Authentication**: JWT
 
