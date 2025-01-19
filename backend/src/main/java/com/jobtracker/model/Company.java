@@ -13,7 +13,7 @@ import static lombok.AccessLevel.PROTECTED;
 @Table(name = "companies")
 @Getter
 @Setter
-@NoArgsConstructor(access = PROTECTED)
+@NoArgsConstructor()
 @ToString(onlyExplicitlyIncluded = true)
 @AllArgsConstructor
 public class Company {
