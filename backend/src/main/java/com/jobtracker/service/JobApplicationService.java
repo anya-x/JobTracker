@@ -1,5 +1,6 @@
 package com.jobtracker.service;
 
+import com.jobtracker.dto.ApplicationStatsDTO;
 import com.jobtracker.dto.JobApplicationDTO;
 import com.jobtracker.model.ApplicationStatus;
 import com.jobtracker.model.Company;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -180,5 +182,36 @@ public class JobApplicationService {
         dto.setCreatedAt(application.getCreatedAt());
         dto.setUpdatedAt(application.getUpdatedAt());
         return dto;
+    }
+
+    public ApplicationStatsDTO getApplicationStats() {
+        List<JobApplication> allApps = applicationRepository.findAll();
+
+        long total = allApps.size();
+
+        // Count by status
+        Map<String, Long> statusCounts = allApps.stream()
+                .collect(Collectors.groupingBy(
+                        app -> app.getStatus().toString(),
+                        Collectors.counting()
+                ));
+
+        // Count active (not rejected or withdrawn)
+        long active = allApps.stream()
+                .filter(app -> app.getStatus() != ApplicationStatus.REJECTED &&
+                        app.getStatus() != ApplicationStatus.WITHDRAWN)
+                .count();
+
+        // Calculate response rate (got interview, offer, or rejection)
+        long responded = allApps.stream()
+                .filter(app -> app.getStatus() == ApplicationStatus.SCREENING||
+                        app.getStatus() == ApplicationStatus.INTERVIEW ||
+                        app.getStatus() == ApplicationStatus.OFFER ||
+                        app.getStatus() == ApplicationStatus.REJECTED)
+                .count();
+
+        double responseRate = total > 0 ? (responded * 100.0 / total) : 0.0;
+
+        return new ApplicationStatsDTO(total, statusCounts, active, responseRate);
     }
 }

@@ -1,5 +1,6 @@
 package com.jobtracker.controller;
 
+import com.jobtracker.dto.ApplicationStatsDTO;
 import com.jobtracker.dto.JobApplicationDTO;
 import com.jobtracker.model.ApplicationStatus;
 import com.jobtracker.service.JobApplicationService;
@@ -65,5 +66,11 @@ public class JobApplicationController {
     @GetMapping("/status/{status}")
     public List<JobApplicationDTO> getApplicationsByStatus(@PathVariable ApplicationStatus status) {
         return applicationService.getApplicationsByStatus(status);
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<ApplicationStatsDTO> getApplicationStats() {
+        ApplicationStatsDTO stats = applicationService.getApplicationStats();
+        return ResponseEntity.ok(stats);
     }
 }
