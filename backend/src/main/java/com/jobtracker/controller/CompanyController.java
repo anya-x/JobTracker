@@ -14,12 +14,20 @@ import java.util.stream.Collectors;
 @RequestMapping("/api/companies")
 @CrossOrigin(origins = "*")
 public class CompanyController {
+
     @Autowired
     private CompanyRepository companyRepository;
 
     @GetMapping
     public List<CompanyDTO> getAllCompanies() {
         return companyRepository.findAll().stream()
+                .map(this::convertToDTO)
+                .collect(Collectors.toList());
+    }
+
+    @GetMapping("/search")
+    public List<CompanyDTO> searchCompanies(@RequestParam String query) {
+        return companyRepository.findByNameContainingIgnoreCase(query).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -32,10 +40,39 @@ public class CompanyController {
     }
 
     @PostMapping
-    public CompanyDTO createCompany(@RequestBody CompanyDTO dto) {
+    public ResponseEntity<?> createCompany(@RequestBody CompanyDTO dto) {
+        // Check if company already exists
+        if (companyRepository.findByName(dto.getName()).isPresent()) {
+            return ResponseEntity.badRequest().body("Company with this name already exists");
+        }
+
         Company company = convertToEntity(dto);
         Company saved = companyRepository.save(company);
-        return convertToDTO(saved);
+        return ResponseEntity.ok(convertToDTO(saved));
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateCompany(@PathVariable Long id, @RequestBody CompanyDTO dto) {
+        return companyRepository.findById(id)
+                .map(existing -> {
+                    existing.setName(dto.getName());
+                    existing.setWebsite(dto.getWebsite());
+                    existing.setIndustry(dto.getIndustry());
+                    existing.setLocation(dto.getLocation());
+                    existing.setNotes(dto.getNotes());
+                    Company updated = companyRepository.save(existing);
+                    return ResponseEntity.ok(convertToDTO(updated));
+                })
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteCompany(@PathVariable Long id) {
+        if (companyRepository.existsById(id)) {
+            companyRepository.deleteById(id);
+            return ResponseEntity.ok().build();
+        }
+        return ResponseEntity.notFound().build();
     }
 
     private CompanyDTO convertToDTO(Company company) {
