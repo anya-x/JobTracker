@@ -22,6 +22,20 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        showCompanyDropdown &&
+        !event.target.closest(".company-search-container")
+      ) {
+        setShowCompanyDropdown(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showCompanyDropdown]);
+
+  useEffect(() => {
     // If editing, populate form
     if (application) {
       setFormData({
@@ -147,7 +161,7 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
       )}
 
       {/* Company Search */}
-      <div className="relative">
+      <div className="relative company-search-container">
         <label className="block text-sm font-medium text-gray-700">
           Company *
         </label>
