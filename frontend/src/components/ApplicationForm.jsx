@@ -241,7 +241,7 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
           value={formData.location}
           onChange={handleChange}
           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          placeholder="e.g., San Francisco, CA (Remote)"
+          placeholder="e.g., London, England"
         />
       </div>
 
@@ -256,7 +256,7 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
           value={formData.salaryRange}
           onChange={handleChange}
           className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-          placeholder="e.g., $120k - $150k"
+          placeholder="e.g., £88k - £120k"
         />
       </div>
 
