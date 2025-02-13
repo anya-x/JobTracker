@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext";
 import ApplicationForm from "../components/ApplicationForm";
 import ApplicationCard from "../components/ApplicationCard";
 import api from "../utils/api";
+import KanbanBoard from "../components/KanbanBoard";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -13,6 +14,7 @@ const Dashboard = () => {
   const [editingApplication, setEditingApplication] = useState(null);
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
+  const [viewMode, setViewMode] = useState("cards");
 
   useEffect(() => {
     fetchApplications();
@@ -188,6 +190,32 @@ const Dashboard = () => {
             />
           </div>
 
+          {/* View Toggle */}
+          <div className="flex justify-end mb-4">
+            <div className="inline-flex rounded-md shadow-sm" role="group">
+              <button
+                onClick={() => setViewMode("cards")}
+                className={`px-4 py-2 text-sm font-medium border ${
+                  viewMode === "cards"
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                } rounded-l-lg`}
+              >
+                Cards
+              </button>
+              <button
+                onClick={() => setViewMode("kanban")}
+                className={`px-4 py-2 text-sm font-medium border-t border-b border-r ${
+                  viewMode === "kanban"
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                } rounded-r-lg`}
+              >
+                Kanban
+              </button>
+            </div>
+          </div>
+
           {/* Form Modal */}
           {showForm && (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -207,7 +235,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Applications List */}
+          {/* Applications List/Kanban */}
           {loading ? (
             <div className="text-center py-12">
               <div className="text-gray-600">Loading applications...</div>
@@ -220,6 +248,11 @@ const Dashboard = () => {
                   : "No applications yet. Create your first one!"}
               </div>
             </div>
+          ) : viewMode === "kanban" ? (
+            <KanbanBoard
+              applications={filteredApplications}
+              onUpdate={fetchApplications}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {filteredApplications.map((app) => (
