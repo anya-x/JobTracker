@@ -1,13 +1,20 @@
+import { useNavigate } from "react-router-dom";
+
 const ApplicationCard = ({ application, onEdit, onDelete }) => {
   const statusColors = {
     SAVED: "bg-gray-100 text-gray-800",
     APPLIED: "bg-yellow-100 text-yellow-800",
-    PHONE_SCREEN: "bg-blue-100 text-blue-800",
+    SCREENING: "bg-blue-100 text-blue-800",
     INTERVIEW: "bg-purple-100 text-purple-800",
     OFFER: "bg-green-100 text-green-800",
     REJECTED: "bg-red-100 text-red-800",
     ACCEPTED: "bg-green-200 text-green-900",
     WITHDRAWN: "bg-gray-200 text-gray-700",
+  };
+
+  const navigate = useNavigate();
+  const handleCardClick = () => {
+    navigate(`/applications/${application.id}`);
   };
 
   const formatDate = (dateString) => {
@@ -21,7 +28,10 @@ const ApplicationCard = ({ application, onEdit, onDelete }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-5 hover:shadow-md transition">
+    <div
+      onClick={handleCardClick}
+      className="bg-white rounded-lg shadow p-5 hover:shadow-md transition"
+    >
       {/* Header */}
       <div className="flex justify-between items-start mb-3">
         <div className="flex-1">
@@ -70,19 +80,26 @@ const ApplicationCard = ({ application, onEdit, onDelete }) => {
             href={application.jobUrl}
             target="_blank"
             rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
             className="text-sm text-indigo-600 hover:text-indigo-800"
           >
             View Job
           </a>
         )}
         <button
-          onClick={() => onEdit(application)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(application);
+          }}
           className="text-sm text-indigo-600 hover:text-indigo-800"
         >
           Edit
         </button>
         <button
-          onClick={() => onDelete(application.id)}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(application.id);
+          }}
           className="text-sm text-red-600 hover:text-red-800"
         >
           Delete

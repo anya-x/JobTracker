@@ -273,7 +273,7 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
         >
           <option value="SAVED">Saved</option>
           <option value="APPLIED">Applied</option>
-          <option value="PHONE_SCREEN">Phone Screen</option>
+          <option value="SCREENING">Screening</option>
           <option value="INTERVIEW">Interview</option>
           <option value="OFFER">Offer</option>
           <option value="REJECTED">Rejected</option>

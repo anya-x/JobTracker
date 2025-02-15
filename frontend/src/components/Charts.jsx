@@ -27,7 +27,7 @@ const Charts = ({ applications }) => {
   const COLORS = {
     SAVED: "#9CA3AF",
     APPLIED: "#FCD34D",
-    "PHONE SCREEN": "#60A5FA",
+    SCREENING: "#60A5FA",
     INTERVIEW: "#A78BFA",
     OFFER: "#34D399",
     REJECTED: "#F87171",
@@ -58,12 +58,12 @@ const Charts = ({ applications }) => {
   // Calculate metrics
   const totalApps = applications.length;
   const appliedCount = applications.filter((a) =>
-    ["APPLIED", "PHONE_SCREEN", "INTERVIEW", "OFFER", "ACCEPTED"].includes(
+    ["APPLIED", "SCREENING", "INTERVIEW", "OFFER", "ACCEPTED"].includes(
       a.status
     )
   ).length;
   const interviewCount = applications.filter((a) =>
-    ["PHONE_SCREEN", "INTERVIEW", "OFFER", "ACCEPTED"].includes(a.status)
+    ["SCREENING", "INTERVIEW", "OFFER", "ACCEPTED"].includes(a.status)
   ).length;
   const offerCount = applications.filter((a) =>
     ["OFFER", "ACCEPTED"].includes(a.status)

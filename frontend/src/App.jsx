@@ -9,6 +9,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import PrivateRoute from "./components/PrivateRoute";
+import ApplicationDetails from "./pages/ApplicationDetails";
 
 function App() {
   return (
@@ -26,6 +27,14 @@ function App() {
             }
           />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route
+            path="/applications/:id"
+            element={
+              <PrivateRoute>
+                <ApplicationDetails />
+              </PrivateRoute>
+            }
+          />
         </Routes>
       </Router>
     </AuthProvider>
