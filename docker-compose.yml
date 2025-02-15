@@ -5,7 +5,7 @@
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: jobtrackr
+      POSTGRES_DB: jobtracker
     ports:
       - "5432:5432"
     volumes:
@@ -17,4 +17,4 @@ volumes:
   postgres_data:
 
 networks:
-  jobtrackr-network:
+  jobtracker-network:

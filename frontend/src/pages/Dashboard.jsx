@@ -215,12 +215,24 @@ const Dashboard = () => {
                 Kanban
               </button>
               <button
-                onClick={() => setViewMode("stats")}
-                className={`px-4 py-2 text-sm font-medium border ${
+                onClick={() => {
+                  if (filterStatus === "ALL") {
+                    setViewMode("stats");
+                  }
+                }}
+                disabled={filterStatus !== "ALL"}
+                className={`px-4 py-2 text-sm font-medium border-t border-b border-r ${
                   viewMode === "stats"
                     ? "bg-indigo-600 text-white border-indigo-600"
+                    : filterStatus !== "ALL"
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" // ✅ Grey when disabled
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                } rounded-r-lg`}
+                } rounded-r-lg transition-colors`}
+                title={
+                  filterStatus !== "ALL"
+                    ? "Stats only available when viewing all applications"
+                    : "View statistics"
+                }
               >
                 Stats
               </button>
