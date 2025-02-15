@@ -5,10 +5,14 @@ import com.jobtracker.dto.JobApplicationDTO;
 import com.jobtracker.model.ApplicationStatus;
 import com.jobtracker.model.Company;
 import com.jobtracker.model.JobApplication;
+import com.jobtracker.model.User;
 import com.jobtracker.repository.CompanyRepository;
 import com.jobtracker.repository.JobApplicationRepository;
+import com.jobtracker.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,9 +28,13 @@ public class JobApplicationService {
 
     private final JobApplicationRepository applicationRepository;
     private final CompanyRepository companyRepository;
+    private final UserRepository userRepository;
 
     public List<JobApplicationDTO> getAllApplications() {
-        return applicationRepository.findAll().stream()
+        User currentUser = getCurrentUser();
+        log.info("📋 Fetching applications for user: {}", currentUser.getEmail());
+
+        return applicationRepository.findByUserId(currentUser.getId()).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -37,22 +45,27 @@ public class JobApplicationService {
         return convertToDTO(application);
     }
 
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
     @Transactional
     public JobApplicationDTO createApplication(JobApplicationDTO dto) {
-        // Validate company exists
+        User currentUser = getCurrentUser();
+
         Company company = companyRepository.findById(dto.getCompanyId())
                 .orElseThrow(() -> new RuntimeException("Company not found"));
 
-        List<JobApplication> existingApps = applicationRepository.findByCompanyId(dto.getCompanyId());
-        boolean hasSamePosition = existingApps.stream()
-                .anyMatch(app -> app.getPosition().equalsIgnoreCase(dto.getPosition()));
-
-        if (hasSamePosition) {
-            log.warn("⚠️ Creating duplicate application: {} at {}", dto.getPosition(), company.getName());
+        // Security: Check company belongs to user
+        if (!company.getUser().getId().equals(currentUser.getId())) {
+            throw new RuntimeException("Access denied");
         }
 
-        // Create application
         JobApplication application = new JobApplication();
+        application.setUser(currentUser);  // ✅ Set the user
         application.setCompany(company);
         application.setPosition(dto.getPosition());
         application.setJobUrl(dto.getJobUrl());
@@ -65,42 +78,34 @@ public class JobApplicationService {
         application.setJobDescription(dto.getJobDescription());
         application.setPriority(dto.getPriority());
 
-        // Auto-set applied date if status is APPLIED and date not provided
         if (application.getStatus() == ApplicationStatus.APPLIED && application.getAppliedDate() == null) {
             application.setAppliedDate(LocalDate.now());
-            log.info("✅ Auto-set applied date to today for {}", dto.getPosition());
         }
 
         JobApplication saved = applicationRepository.save(application);
-        log.info("✅ Created application: {} at {}", saved.getPosition(), company.getName());
+        log.info("✅ Created application: {} at {} for user {}",
+                saved.getPosition(), company.getName(), currentUser.getEmail());
 
         return convertToDTO(saved);
     }
 
     @Transactional
     public JobApplicationDTO updateApplication(Long id, JobApplicationDTO dto) {
-        JobApplication application = applicationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Application not found"));
+        User currentUser = getCurrentUser();
+
+        JobApplication application = applicationRepository.findByIdAndUserId(id, currentUser.getId())
+                .orElseThrow(() -> new RuntimeException("Application not found or access denied"));
+
+        // If changing company, verify new company belongs to user
+        if (!application.getCompany().getId().equals(dto.getCompanyId())) {
+            Company newCompany = companyRepository.findByIdAndUserId(dto.getCompanyId(), currentUser.getId())
+                    .orElseThrow(() -> new RuntimeException("Company not found or access denied"));
+            application.setCompany(newCompany);
+        }
 
         ApplicationStatus oldStatus = application.getStatus();
         ApplicationStatus newStatus = dto.getStatus();
 
-        // Soft validation: Log unusual transitions (but allow them)
-        if (isUnusualTransition(oldStatus, newStatus)) {
-            log.warn("⚠️ Unusual status transition: {} → {} for application #{}",
-                    oldStatus, newStatus, id);
-            log.warn("   Position: {} at {}", application.getPosition(), application.getCompany().getName());
-            // Still allow it - user might have good reason!
-        }
-
-        // Update company if changed
-        if (!application.getCompany().getId().equals(dto.getCompanyId())) {
-            Company company = companyRepository.findById(dto.getCompanyId())
-                    .orElseThrow(() -> new RuntimeException("Company not found"));
-            application.setCompany(company);
-        }
-
-        // Update fields
         application.setPosition(dto.getPosition());
         application.setJobUrl(dto.getJobUrl());
         application.setLocation(dto.getLocation());
@@ -112,12 +117,10 @@ public class JobApplicationService {
         application.setJobDescription(dto.getJobDescription());
         application.setPriority(dto.getPriority());
 
-        // Auto-set applied date when transitioning to APPLIED
         if (newStatus == ApplicationStatus.APPLIED &&
                 oldStatus != ApplicationStatus.APPLIED &&
                 application.getAppliedDate() == null) {
             application.setAppliedDate(LocalDate.now());
-            log.info("✅ Auto-set applied date when status changed to APPLIED");
         }
 
         JobApplication updated = applicationRepository.save(application);
@@ -128,15 +131,18 @@ public class JobApplicationService {
 
     @Transactional
     public void deleteApplication(Long id) {
-        if (!applicationRepository.existsById(id)) {
-            throw new RuntimeException("Application not found");
-        }
-        applicationRepository.deleteById(id);
-        log.info("🗑️ Deleted application #{}", id);
+        User currentUser = getCurrentUser();
+
+        JobApplication application = applicationRepository.findByIdAndUserId(id, currentUser.getId())
+                .orElseThrow(() -> new RuntimeException("Application not found or access denied"));
+
+        applicationRepository.delete(application);
+        log.info("🗑️ Deleted application #{} for user {}", id, currentUser.getEmail());
     }
 
     public List<JobApplicationDTO> getApplicationsByStatus(ApplicationStatus status) {
-        return applicationRepository.findByStatus(status).stream()
+        User currentUser = getCurrentUser();
+        return applicationRepository.findByUserIdAndStatus(currentUser.getId(), status).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
@@ -146,10 +152,7 @@ public class JobApplicationService {
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
     }
-
-    /**
-     * Check if a status transition is unusual (but still allowed)
-     */
+    
     private boolean isUnusualTransition(ApplicationStatus from, ApplicationStatus to) {
         if (from == to) {
             return false;

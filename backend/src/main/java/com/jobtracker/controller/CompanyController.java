@@ -2,9 +2,17 @@ package com.jobtracker.controller;
 
 import com.jobtracker.dto.CompanyDTO;
 import com.jobtracker.model.Company;
+import com.jobtracker.model.User;
 import com.jobtracker.repository.CompanyRepository;
+import com.jobtracker.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.extern.slf4j.XSlf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,66 +21,98 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/companies")
 @CrossOrigin(origins = "*")
+@RequiredArgsConstructor
+@Slf4j
 public class CompanyController {
 
     @Autowired
     private CompanyRepository companyRepository;
 
+    private final UserRepository userRepository;
+
+    private User getCurrentUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String email = authentication.getName();
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+    }
+
     @GetMapping
-    public List<CompanyDTO> getAllCompanies() {
-        return companyRepository.findAll().stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public ResponseEntity<List<Company>> getAllCompanies() {
+        User currentUser = getCurrentUser();
+        log.info("📋 Fetching companies for user: {}", currentUser.getEmail());
+
+        List<Company> companies = companyRepository.findByUserId(currentUser.getId());
+        return ResponseEntity.ok(companies);
     }
 
     @GetMapping("/search")
-    public List<CompanyDTO> searchCompanies(@RequestParam String query) {
-        return companyRepository.findByNameContainingIgnoreCase(query).stream()
-                .map(this::convertToDTO)
-                .collect(Collectors.toList());
+    public ResponseEntity<List<Company>> searchCompanies(@RequestParam String query) {
+        User currentUser = getCurrentUser();
+        List<Company> companies = companyRepository.findByUserIdAndNameContainingIgnoreCase(
+                currentUser.getId(), query);
+        log.info("🔍 Search '{}' for user {} returned {} results",
+                query, currentUser.getEmail(), companies.size());
+        return ResponseEntity.ok(companies);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<CompanyDTO> getCompanyById(@PathVariable Long id) {
-        return companyRepository.findById(id)
-                .map(company -> ResponseEntity.ok(convertToDTO(company)))
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getCompanyById(@PathVariable Long id) {
+        User currentUser = getCurrentUser();
+
+        return companyRepository.findByIdAndUserId(id, currentUser.getId())
+                .map(company -> ResponseEntity.ok((Object) company))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Company not found or access denied"));
     }
 
     @PostMapping
-    public ResponseEntity<?> createCompany(@RequestBody CompanyDTO dto) {
-        // Check if company already exists
-        if (companyRepository.findByName(dto.getName()).isPresent()) {
-            return ResponseEntity.badRequest().body("Company with this name already exists");
-        }
+    public ResponseEntity<?> createCompany(@RequestBody Company company) {
+        try {
+            User currentUser = getCurrentUser();
+            company.setUser(currentUser);  // ✅ Set the user
 
-        Company company = convertToEntity(dto);
-        Company saved = companyRepository.save(company);
-        return ResponseEntity.ok(convertToDTO(saved));
+            Company saved = companyRepository.save(company);
+            log.info("✅ Created company: {} for user {}", saved.getName(), currentUser.getEmail());
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (Exception e) {
+            log.error("Failed to create company: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Failed to create company: " + e.getMessage());
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateCompany(@PathVariable Long id, @RequestBody CompanyDTO dto) {
-        return companyRepository.findById(id)
-                .map(existing -> {
-                    existing.setName(dto.getName());
-                    existing.setWebsite(dto.getWebsite());
-                    existing.setIndustry(dto.getIndustry());
-                    existing.setLocation(dto.getLocation());
-                    existing.setNotes(dto.getNotes());
-                    Company updated = companyRepository.save(existing);
-                    return ResponseEntity.ok(convertToDTO(updated));
+    public ResponseEntity<?> updateCompany(@PathVariable Long id, @RequestBody Company companyDetails) {
+        User currentUser = getCurrentUser();
+
+        return companyRepository.findByIdAndUserId(id, currentUser.getId())
+                .map(company -> {
+                    company.setName(companyDetails.getName());
+                    company.setWebsite(companyDetails.getWebsite());
+                    company.setIndustry(companyDetails.getIndustry());
+                    company.setLocation(companyDetails.getLocation());
+                    company.setNotes(companyDetails.getNotes());
+                    Company updated = companyRepository.save(company);
+                    log.info("✅ Updated company: {}", updated.getName());
+                    return ResponseEntity.ok((Object) updated);
                 })
-                .orElse(ResponseEntity.notFound().build());
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Company not found or access denied"));
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteCompany(@PathVariable Long id) {
-        if (companyRepository.existsById(id)) {
-            companyRepository.deleteById(id);
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.notFound().build();
+        User currentUser = getCurrentUser();
+
+        return companyRepository.findByIdAndUserId(id, currentUser.getId())
+                .map(company -> {
+                    companyRepository.delete(company);
+                    log.info("🗑️ Deleted company: {}", company.getName());
+                    return ResponseEntity.ok( "Company deleted successfully");
+                })
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body("Company not found or access denied"));
     }
 
     private CompanyDTO convertToDTO(Company company) {

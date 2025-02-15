@@ -21,4 +21,7 @@ public interface CompanyRepository extends JpaRepository<Company, Long> {
     boolean existsByNameIgnoreCase(String name);
 
     List<Company> findByCreatedAtAfter(LocalDateTime date);
+    List<Company> findByUserId(Long userId);
+    List<Company> findByUserIdAndNameContainingIgnoreCase(Long userId, String name);
+    Optional<Company> findByIdAndUserId(Long id, Long userId);
 }

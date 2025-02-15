@@ -24,5 +24,10 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     JobApplication findByCompany_Industry(String industry);
 
     JobApplication findByCompany_Location(String location);
-    
+
+    List<JobApplication> findByUserId(Long userId);
+    List<JobApplication> findByUserIdAndStatus(Long userId, ApplicationStatus status);
+    List<JobApplication> findByUserIdAndCompanyId(Long userId, Long companyId);
+    Optional<JobApplication> findByIdAndUserId(Long id, Long userId);
+
 }
