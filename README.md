@@ -83,7 +83,7 @@ A full-stack web application to help job seekers organise and track their job ap
 ```
 SAVED          - Saved for later
 APPLIED        - Application submitted
-PHONE_SCREEN   - Phone screening scheduled/completed
+SCREENING      - Screening scheduled/completed
 INTERVIEW      - Interview scheduled/completed
 OFFER          - Offer received
 REJECTED       - Application rejected
