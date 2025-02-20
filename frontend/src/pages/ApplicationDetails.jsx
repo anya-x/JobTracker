@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../utils/api";
+import DocumentUpload from "../components/DocumentUpload";
 
 const ApplicationDetails = () => {
   const { id } = useParams();
@@ -340,6 +341,9 @@ const ApplicationDetails = () => {
                 </p>
               </div>
             )}
+          </div>
+          <div className="mb-8">
+            <DocumentUpload applicationId={application.id} />
           </div>
 
           {/* Timeline */}
