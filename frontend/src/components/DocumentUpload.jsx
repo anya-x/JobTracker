@@ -56,11 +56,17 @@ const DocumentUpload = ({ applicationId }) => {
     }
   };
 
-  const handleDownload = (id) => {
-    window.open(
-      `${import.meta.env.VITE_API_URL}/documents/download/${id}`,
-      "_blank"
-    );
+  const handleDownload = async (id, fileName) => {
+    const response = await api.get(`/documents/download/${id}`, {
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = fileName;
+    link.click();
+    window.URL.revokeObjectURL(url);
   };
 
   const formatFileSize = (bytes) => {
@@ -108,7 +114,7 @@ const DocumentUpload = ({ applicationId }) => {
               </div>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => handleDownload(doc.id)}
+                  onClick={() => handleDownload(doc.id, doc.fileName)}
                   className="text-sm text-indigo-600 hover:text-indigo-800"
                 >
                   Download
