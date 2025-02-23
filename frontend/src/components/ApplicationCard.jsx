@@ -72,6 +72,45 @@ const ApplicationCard = ({ application, onEdit, onDelete }) => {
           </p>
         </div>
       )}
+      {/* Interview Details */}
+      {(application.status === "INTERVIEW" ||
+        application.status === "SCREENING") &&
+        application.interviewDate && (
+          <div className="mt-3 p-3 bg-purple-50 rounded-lg border border-purple-200">
+            <div className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
+              <span>🗓️</span>
+              <span>Interview Scheduled</span>
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="flex items-center gap-2">
+                <span>📅</span>
+                <span>
+                  {new Date(application.interviewDate).toLocaleDateString()}
+                </span>
+              </div>
+              {application.interviewTime && (
+                <div className="flex items-center gap-2">
+                  <span>🕐</span>
+                  <span>{application.interviewTime}</span>
+                </div>
+              )}
+              {application.interviewType && (
+                <div className="flex items-center gap-2">
+                  <span>💼</span>
+                  <span>{application.interviewType.replace("_", " ")}</span>
+                </div>
+              )}
+              {application.interviewLocation && (
+                <div className="flex items-center gap-2">
+                  <span>📍</span>
+                  <span className="truncate">
+                    {application.interviewLocation}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
       {/* Actions */}
       <div className="flex justify-end space-x-2 pt-3 border-t border-gray-200">

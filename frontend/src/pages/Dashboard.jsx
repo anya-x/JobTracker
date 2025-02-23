@@ -5,6 +5,7 @@ import ApplicationCard from "../components/ApplicationCard";
 import api from "../utils/api";
 import KanbanBoard from "../components/KanbanBoard";
 import Charts from "../components/Charts";
+import Interview from "../components/Interview";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -39,12 +40,16 @@ const Dashboard = () => {
   const filterApplications = () => {
     let filtered = applications;
 
-    // Filter by status
     if (filterStatus !== "ALL") {
-      filtered = filtered.filter((app) => app.status === filterStatus);
+      if (filterStatus === "INTERVIEW") {
+        filtered = filtered.filter(
+          (app) => app.status === "INTERVIEW" || app.status === "SCREENING"
+        );
+      } else {
+        filtered = filtered.filter((app) => app.status === filterStatus);
+      }
     }
 
-    // Filter by search query
     if (searchQuery) {
       filtered = filtered.filter(
         (app) =>
@@ -236,6 +241,17 @@ const Dashboard = () => {
               >
                 Stats
               </button>
+
+              <button
+                onClick={() => setViewMode("interviews")}
+                className={`px-4 py-2 text-sm font-medium border ${
+                  viewMode === "interviews"
+                    ? "bg-indigo-600 text-white border-indigo-600"
+                    : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                Interviews
+              </button>
             </div>
           </div>
 
@@ -258,7 +274,7 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Applications List/Kanban/stats */}
+          {/* Applications List/Kanban/stats/ interviews */}
           {loading ? (
             <div className="text-center py-12">
               <div className="text-gray-600">Loading applications...</div>
@@ -271,6 +287,8 @@ const Dashboard = () => {
                   : "No applications yet. Create your first one!"}
               </div>
             </div>
+          ) : viewMode === "interviews" ? (
+            <Interview applications={applications} />
           ) : viewMode === "stats" ? (
             <Charts applications={applications} />
           ) : viewMode === "kanban" ? (

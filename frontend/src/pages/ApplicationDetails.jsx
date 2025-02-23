@@ -265,7 +265,164 @@ const ApplicationDetails = () => {
                 </p>
               )}
             </div>
+            {/* Interview */}
+            {(application.status === "INTERVIEW" ||
+              application.status === "SCREENING") && (
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-6 mb-6">
+                <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
+                  <span>🗓️</span>
+                  <span>Interview Details</span>
+                </h3>
 
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Interview Date */}
+                  <div>
+                    <label className="block text-sm font-medium text-purple-700 mb-2">
+                      Interview Date
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="date"
+                        value={editData.interviewDate || ""}
+                        onChange={(e) =>
+                          setEditData({
+                            ...editData,
+                            interviewDate: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500"
+                      />
+                    ) : application.interviewDate ? (
+                      <p className="text-purple-900 font-semibold">
+                        {new Date(application.interviewDate).toLocaleDateString(
+                          "en-US",
+                          {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          }
+                        )}
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">Not scheduled</p>
+                    )}
+                  </div>
+
+                  {/* Interview Time */}
+                  <div>
+                    <label className="block text-sm font-medium text-purple-700 mb-2">
+                      Interview Time
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="time"
+                        value={editData.interviewTime || ""}
+                        onChange={(e) =>
+                          setEditData({
+                            ...editData,
+                            interviewTime: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500"
+                      />
+                    ) : application.interviewTime ? (
+                      <p className="text-purple-900 font-semibold flex items-center gap-2">
+                        <span>🕐</span>
+                        <span>{application.interviewTime}</span>
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">Not set</p>
+                    )}
+                  </div>
+
+                  {/* Interview Type */}
+                  <div>
+                    <label className="block text-sm font-medium text-purple-700 mb-2">
+                      Interview Type
+                    </label>
+                    {isEditing ? (
+                      <select
+                        value={editData.interviewType || "PHONE"}
+                        onChange={(e) =>
+                          setEditData({
+                            ...editData,
+                            interviewType: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="PHONE">Phone Call</option>
+                        <option value="VIDEO">Video Call</option>
+                        <option value="ONSITE">On-site</option>
+                        <option value="TECHNICAL">Technical Interview</option>
+                        <option value="BEHAVIORAL">Behavioral Interview</option>
+                        <option value="FINAL">Final Round</option>
+                      </select>
+                    ) : application.interviewType ? (
+                      <p className="text-purple-900 flex items-center gap-2">
+                        <span>💼</span>
+                        <span>
+                          {application.interviewType.replace("_", " ")}
+                        </span>
+                      </p>
+                    ) : (
+                      <p className="text-gray-500">Not specified</p>
+                    )}
+                  </div>
+
+                  {/* Interview Location/Link */}
+                  <div>
+                    <label className="block text-sm font-medium text-purple-700 mb-2">
+                      Location / Meeting Link
+                    </label>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={editData.interviewLocation || ""}
+                        onChange={(e) =>
+                          setEditData({
+                            ...editData,
+                            interviewLocation: e.target.value,
+                          })
+                        }
+                        placeholder="Zoom link, office address, etc."
+                        className="w-full px-3 py-2 border border-purple-300 rounded-md focus:ring-2 focus:ring-purple-500"
+                      />
+                    ) : application.interviewLocation ? (
+                      application.interviewLocation.startsWith("http") ? (
+                        <a
+                          href={application.interviewLocation}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-purple-600 hover:text-purple-800 underline break-all flex items-center gap-2"
+                        >
+                          <span>🔗</span>
+                          <span>{application.interviewLocation}</span>
+                        </a>
+                      ) : (
+                        <p className="text-purple-900 flex items-center gap-2">
+                          <span>📍</span>
+                          <span>{application.interviewLocation}</span>
+                        </p>
+                      )
+                    ) : (
+                      <p className="text-gray-500">Not specified</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Time Until Interview */}
+                {!isEditing && application.interviewDate && (
+                  <div className="mt-6 pt-6 border-t border-purple-200">
+                    <TimeUntilInterview
+                      date={application.interviewDate}
+                      time={application.interviewTime}
+                    />
+                  </div>
+                )}
+              </div>
+            )}
             {/* Job URL */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -385,6 +542,68 @@ const ApplicationDetails = () => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+const TimeUntilInterview = ({ date, time }) => {
+  const [timeText, setTimeText] = useState("");
+  const [colorClass, setColorClass] = useState("");
+
+  useEffect(() => {
+    const updateCountdown = () => {
+      const interviewDateTime = new Date(date);
+
+      if (time) {
+        const [hours, minutes] = time.split(":");
+        interviewDateTime.setHours(parseInt(hours), parseInt(minutes));
+      }
+
+      const now = new Date();
+      const diff = interviewDateTime - now;
+
+      if (diff < 0) {
+        setTimeText("Interview has passed");
+        setColorClass("text-gray-600");
+        return;
+      }
+
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(
+        (diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)
+      );
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+      if (days === 0 && hours === 0) {
+        setTimeText(`In ${minutes} minute${minutes !== 1 ? "s" : ""} ⏰`);
+        setColorClass("text-red-600 font-bold animate-pulse");
+      } else if (days === 0) {
+        setTimeText(`Today in ${hours} hour${hours !== 1 ? "s" : ""} 🔔`);
+        setColorClass("text-orange-600 font-semibold");
+      } else if (days === 1) {
+        setTimeText("Tomorrow 📅");
+        setColorClass("text-yellow-600 font-semibold");
+      } else if (days <= 7) {
+        setTimeText(`In ${days} day${days !== 1 ? "s" : ""}`);
+        setColorClass("text-green-600");
+      } else {
+        setTimeText(`In ${days} days`);
+        setColorClass("text-purple-600");
+      }
+    };
+
+    updateCountdown();
+    const interval = setInterval(updateCountdown, 60000);
+
+    return () => clearInterval(interval);
+  }, [date, time]);
+
+  return (
+    <div className="flex items-center justify-center gap-3 bg-purple-100 rounded-lg p-4">
+      <span className="text-sm font-medium text-purple-700">
+        Time until interview:
+      </span>
+      <span className={`text-lg font-bold ${colorClass}`}>{timeText}</span>
     </div>
   );
 };

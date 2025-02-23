@@ -13,6 +13,10 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
     appliedDate: "",
     notes: "",
     priority: 3,
+    interviewDate: "",
+    interviewTime: "",
+    interviewType: "PHONE",
+    interviewLocation: "",
   });
 
   const [companies, setCompanies] = useState([]);
@@ -36,7 +40,6 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
   }, [showCompanyDropdown]);
 
   useEffect(() => {
-    // If editing, populate form
     if (application) {
       setFormData({
         companyId: application.companyId,
@@ -49,13 +52,16 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
         appliedDate: application.appliedDate || "",
         notes: application.notes || "",
         priority: application.priority || 3,
+        interviewDate: application.interviewDate || "",
+        interviewTime: application.interviewTime || "",
+        interviewType: application.interviewType || "PHONE",
+        interviewLocation: application.interviewLocation || "",
       });
       setSearchQuery(application.companyName);
     }
   }, [application]);
 
   useEffect(() => {
-    // Fetch companies when user types
     const fetchCompanies = async () => {
       if (searchQuery.length > 0) {
         try {
@@ -122,7 +128,6 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
     setLoading(true);
 
     try {
-      // Create company if needed
       let companyId = formData.companyId;
       if (!companyId && formData.companyName) {
         const companyResponse = await api.post("/companies", {
@@ -137,10 +142,8 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
       };
 
       if (application) {
-        // Update existing
         await api.put(`/applications/${application.id}`, applicationData);
       } else {
-        // Create new
         await api.post("/applications", applicationData);
       }
 
@@ -324,6 +327,78 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
           placeholder="Add any notes about this application..."
         />
       </div>
+
+      {/*Interview */}
+      {(formData.status === "INTERVIEW" || formData.status === "SCREENING") && (
+        <div className="border-t pt-4 mt-4">
+          <h3 className="text-lg font-semibold mb-3 text-gray-900">
+            📅 Interview Details
+          </h3>
+
+          {/* Interview Date */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Interview Date
+            </label>
+            <input
+              type="date"
+              name="interviewDate"
+              value={formData.interviewDate}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Interview Time */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Interview Time
+            </label>
+            <input
+              type="time"
+              name="interviewTime"
+              value={formData.interviewTime}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+
+          {/* Interview Type */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Interview Type
+            </label>
+            <select
+              name="interviewType"
+              value={formData.interviewType}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+            >
+              <option value="PHONE">Phone Call</option>
+              <option value="VIDEO">Video Call</option>
+              <option value="ONSITE">On-site</option>
+              <option value="TECHNICAL">Technical Interview</option>
+              <option value="BEHAVIORAL">Behavioral Interview</option>
+              <option value="FINAL">Final Round</option>
+            </select>
+          </div>
+
+          {/* Interview Location/Link */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Location / Meeting Link
+            </label>
+            <input
+              type="text"
+              name="interviewLocation"
+              value={formData.interviewLocation}
+              onChange={handleChange}
+              placeholder="Zoom link, office address, etc."
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500"
+            />
+          </div>
+        </div>
+      )}
 
       {/* Buttons */}
       <div className="flex justify-end space-x-3">
