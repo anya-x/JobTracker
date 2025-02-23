@@ -23,4 +23,8 @@ public class JobApplicationDTO {
     private Integer priority;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private LocalDate interviewDate;
+    private String interviewTime;
+    private String interviewType;
+    private String interviewLocation;
 }

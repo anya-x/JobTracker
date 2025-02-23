@@ -77,6 +77,10 @@ public class JobApplicationService {
         application.setNotes(dto.getNotes());
         application.setJobDescription(dto.getJobDescription());
         application.setPriority(dto.getPriority());
+        application.setInterviewDate(dto.getInterviewDate());
+        application.setInterviewTime(dto.getInterviewTime());
+        application.setInterviewType(dto.getInterviewType());
+        application.setInterviewLocation(dto.getInterviewLocation());
 
         if (application.getStatus() == ApplicationStatus.APPLIED && application.getAppliedDate() == null) {
             application.setAppliedDate(LocalDate.now());
@@ -116,6 +120,11 @@ public class JobApplicationService {
         application.setNotes(dto.getNotes());
         application.setJobDescription(dto.getJobDescription());
         application.setPriority(dto.getPriority());
+        application.setInterviewDate(dto.getInterviewDate());
+        application.setInterviewTime(dto.getInterviewTime());
+        application.setInterviewType(dto.getInterviewType());
+        application.setInterviewLocation(dto.getInterviewLocation());
+
 
         if (newStatus == ApplicationStatus.APPLIED &&
                 oldStatus != ApplicationStatus.APPLIED &&
@@ -184,6 +193,11 @@ public class JobApplicationService {
         dto.setPriority(application.getPriority());
         dto.setCreatedAt(application.getCreatedAt());
         dto.setUpdatedAt(application.getUpdatedAt());
+        dto.setInterviewDate(application.getInterviewDate());
+        dto.setInterviewTime(application.getInterviewTime());
+        dto.setInterviewType(application.getInterviewType());
+        dto.setInterviewLocation(application.getInterviewLocation());
+
         return dto;
     }
 

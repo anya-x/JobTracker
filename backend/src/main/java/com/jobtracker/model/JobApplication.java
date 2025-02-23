@@ -73,5 +73,14 @@ public class JobApplication {
         updatedAt = LocalDateTime.now();
     }
 
+    private LocalDate interviewDate;
+    private String interviewTime;
+
+    @Column(length = 50)
+    private String interviewType;
+
+    @Column(length = 500)
+    private String interviewLocation;
+
     //TO DO : implement equals and hashcode
 }
