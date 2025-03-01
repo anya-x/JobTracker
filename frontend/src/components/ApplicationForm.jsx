@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../utils/api";
+import toast from "react-hot-toast";
 
 const ApplicationForm = ({ application, onSuccess, onCancel }) => {
   const [formData, setFormData] = useState({
@@ -134,6 +135,7 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
           name: formData.companyName,
         });
         companyId = companyResponse.data.id;
+        toast.success(`Created company: ${formData.companyName}`);
       }
 
       const applicationData = {
@@ -149,7 +151,9 @@ const ApplicationForm = ({ application, onSuccess, onCancel }) => {
 
       onSuccess();
     } catch (err) {
-      setError(err.response?.data || "Failed to save application");
+      const errorMsg = err.response?.data || "Failed to save application";
+      setError(errorMsg);
+      toast.error(errorMsg);
     } finally {
       setLoading(false);
     }

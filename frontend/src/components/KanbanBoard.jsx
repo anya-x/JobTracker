@@ -133,7 +133,6 @@ const KanbanBoard = ({ applications, onUpdate, onEdit, onDelete }) => {
 
   return (
     <div>
-      {/* ✅ Column Selector Controls */}
       <div className="mb-4 flex justify-between items-center">
         <div className="text-sm text-gray-600">
           Showing {visibleColumns.length} of {allColumns.length} columns
@@ -171,7 +170,7 @@ const KanbanBoard = ({ applications, onUpdate, onEdit, onDelete }) => {
         </div>
       </div>
 
-      {/* ✅ Column Selector Dropdown */}
+      {/* Column Selector */}
       {showColumnSelector && (
         <div className="mb-4 bg-white border border-gray-300 rounded-lg p-4 shadow-lg">
           <h3 className="text-sm font-semibold text-gray-900 mb-3">

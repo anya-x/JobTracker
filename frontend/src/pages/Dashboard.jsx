@@ -6,7 +6,8 @@ import api from "../utils/api";
 import KanbanBoard from "../components/KanbanBoard";
 import Charts from "../components/Charts";
 import Interview from "../components/Interview";
-
+import EmptyState from "../components/EmptyState";
+import LoadingSkeleton from "../components/LoadingSkeleton";
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [applications, setApplications] = useState([]);
@@ -31,6 +32,7 @@ const Dashboard = () => {
       const response = await api.get("/applications");
       setApplications(response.data);
     } catch (err) {
+      toast.error("Failed to load applications");
       console.error("Failed to fetch applications:", err);
     } finally {
       setLoading(false);
@@ -64,6 +66,9 @@ const Dashboard = () => {
   const handleFormSuccess = () => {
     setShowForm(false);
     setEditingApplication(null);
+    toast.success(
+      editingApplication ? "Application updated!" : "Application created!"
+    );
     fetchApplications();
   };
 
@@ -76,9 +81,10 @@ const Dashboard = () => {
     if (window.confirm("Are you sure you want to delete this application?")) {
       try {
         await api.delete(`/applications/${id}`);
+        toast.success("Application deleted");
         fetchApplications();
       } catch (err) {
-        alert("Failed to delete application");
+        toast.error("Failed to delete application");
       }
     }
   };
@@ -276,17 +282,28 @@ const Dashboard = () => {
 
           {/* Applications List/Kanban/stats/ interviews */}
           {loading ? (
-            <div className="text-center py-12">
-              <div className="text-gray-600">Loading applications...</div>
-            </div>
+            <LoadingSkeleton />
           ) : filteredApplications.length === 0 ? (
-            <div className="text-center py-12 bg-white rounded-lg shadow">
-              <div className="text-gray-600 mb-4">
-                {searchQuery || filterStatus !== "ALL"
-                  ? "No applications match your filters"
-                  : "No applications yet. Create your first one!"}
-              </div>
-            </div>
+            searchQuery || filterStatus !== "ALL" ? (
+              <EmptyState
+                icon="🔍"
+                title="No matches found"
+                description="Try adjusting your search or filters"
+              />
+            ) : (
+              <EmptyState
+                icon="📝"
+                title="No applications yet"
+                description="Start tracking your job applications to see them here"
+                action={{
+                  label: "+ Add Your First Application",
+                  onClick: () => {
+                    setEditingApplication(null);
+                    setShowForm(true);
+                  },
+                }}
+              />
+            )
           ) : viewMode === "interviews" ? (
             <Interview applications={applications} />
           ) : viewMode === "stats" ? (
