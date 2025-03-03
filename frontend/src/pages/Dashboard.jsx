@@ -8,6 +8,9 @@ import Charts from "../components/Charts";
 import Interview from "../components/Interview";
 import EmptyState from "../components/EmptyState";
 import LoadingSkeleton from "../components/LoadingSkeleton";
+import AdvancedFilters from "../components/AdvancedFilters";
+import toast from "react-hot-toast";
+
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [applications, setApplications] = useState([]);
@@ -18,6 +21,8 @@ const Dashboard = () => {
   const [filterStatus, setFilterStatus] = useState("ALL");
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState("cards");
+  const [advancedFilters, setAdvancedFilters] = useState(null);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
   useEffect(() => {
     fetchApplications();
@@ -25,7 +30,7 @@ const Dashboard = () => {
 
   useEffect(() => {
     filterApplications();
-  }, [applications, filterStatus, searchQuery]);
+  }, [applications, filterStatus, searchQuery, advancedFilters]);
 
   const fetchApplications = async () => {
     try {
@@ -42,25 +47,140 @@ const Dashboard = () => {
   const filterApplications = () => {
     let filtered = applications;
 
-    if (filterStatus !== "ALL") {
-      if (filterStatus === "INTERVIEW") {
+    // Apply basic filters only if advanced filters are not active
+    if (!advancedFilters) {
+      // Basic status filter
+      if (filterStatus !== "ALL") {
+        if (filterStatus === "INTERVIEW") {
+          filtered = filtered.filter(
+            (app) =>
+              app.status === "INTERVIEW" ||
+              app.status === "SCREENING" ||
+              app.status === "PHONE_SCREEN"
+          );
+        } else {
+          filtered = filtered.filter((app) => app.status === filterStatus);
+        }
+      }
+
+      // Basic search
+      if (searchQuery) {
         filtered = filtered.filter(
-          (app) => app.status === "INTERVIEW" || app.status === "SCREENING"
+          (app) =>
+            app.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            app.position.toLowerCase().includes(searchQuery.toLowerCase())
         );
-      } else {
-        filtered = filtered.filter((app) => app.status === filterStatus);
       }
     }
 
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (app) =>
-          app.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          app.position.toLowerCase().includes(searchQuery.toLowerCase())
-      );
+    // Apply advanced filters (overrides basic filters)
+    if (advancedFilters) {
+      // Status filter
+      if (advancedFilters.status && advancedFilters.status !== "ALL") {
+        filtered = filtered.filter(
+          (app) => app.status === advancedFilters.status
+        );
+      }
+
+      // Date range filters - FIXED VERSION
+      if (advancedFilters.startDate) {
+        filtered = filtered.filter((app) => {
+          if (!app.appliedDate) return false;
+
+          // Convert both dates to Date objects for proper comparison
+          const appDate = new Date(app.appliedDate);
+          const startDate = new Date(advancedFilters.startDate);
+
+          // Reset time to midnight for date-only comparison
+          appDate.setHours(0, 0, 0, 0);
+          startDate.setHours(0, 0, 0, 0);
+
+          return appDate >= startDate;
+        });
+      }
+
+      if (advancedFilters.endDate) {
+        filtered = filtered.filter((app) => {
+          if (!app.appliedDate) return false;
+
+          // Convert both dates to Date objects for proper comparison
+          const appDate = new Date(app.appliedDate);
+          const endDate = new Date(advancedFilters.endDate);
+
+          // Reset time to midnight for date-only comparison
+          appDate.setHours(0, 0, 0, 0);
+          endDate.setHours(0, 0, 0, 0);
+
+          return appDate <= endDate;
+        });
+      }
+
+      // Location filter
+      if (advancedFilters.location) {
+        filtered = filtered.filter(
+          (app) =>
+            app.location &&
+            app.location
+              .toLowerCase()
+              .includes(advancedFilters.location.toLowerCase())
+        );
+      }
+
+      // Priority filter
+      if (advancedFilters.priority) {
+        filtered = filtered.filter(
+          (app) =>
+            app.priority && app.priority >= parseInt(advancedFilters.priority)
+        );
+      }
+
+      // Salary range filters
+      if (advancedFilters.minSalary || advancedFilters.maxSalary) {
+        filtered = filtered.filter((app) => {
+          if (!app.salary) return false;
+
+          // Extract numbers from salary string (handles formats like "$100,000 - $120,000")
+          const salaryNumbers = app.salary.match(/\d+/g);
+          if (!salaryNumbers || salaryNumbers.length === 0) return false;
+
+          // Get the salary range from the string
+          const minSalary = parseInt(salaryNumbers[0].replace(/,/g, ""));
+          const maxSalary =
+            salaryNumbers.length > 1
+              ? parseInt(salaryNumbers[1].replace(/,/g, ""))
+              : minSalary;
+
+          // Get filter bounds
+          const filterMin = advancedFilters.minSalary
+            ? parseInt(advancedFilters.minSalary)
+            : 0;
+          const filterMax = advancedFilters.maxSalary
+            ? parseInt(advancedFilters.maxSalary)
+            : Infinity;
+
+          // Check if salary range overlaps with filter range
+          return maxSalary >= filterMin && minSalary <= filterMax;
+        });
+      }
     }
 
     setFilteredApplications(filtered);
+  };
+
+  const handleApplyAdvanced = (filters) => {
+    console.log("Applying filters:", filters); // Debug log
+    setAdvancedFilters(filters);
+    setFilterStatus("ALL");
+    setSearchQuery("");
+    toast.success("Filters applied");
+  };
+
+  const handleResetAdvanced = () => {
+    setAdvancedFilters(null);
+    setFilterStatus("ALL");
+    setSearchQuery("");
+    setShowAdvancedFilters(false);
+    toast.info("Filters reset");
   };
 
   const handleFormSuccess = () => {
@@ -94,7 +214,10 @@ const Dashboard = () => {
     SAVED: applications.filter((a) => a.status === "SAVED").length,
     APPLIED: applications.filter((a) => a.status === "APPLIED").length,
     INTERVIEW: applications.filter(
-      (a) => a.status === "INTERVIEW" || a.status === "SCREENING"
+      (a) =>
+        a.status === "INTERVIEW" ||
+        a.status === "SCREENING" ||
+        a.status === "PHONE_SCREEN"
     ).length,
     OFFER: applications.filter((a) => a.status === "OFFER").length,
   };
@@ -178,9 +301,15 @@ const Dashboard = () => {
             ].map((stat) => (
               <div
                 key={stat.status}
-                onClick={() => setFilterStatus(stat.status)}
+                onClick={() => {
+                  setFilterStatus(stat.status);
+                  setAdvancedFilters(null);
+                  setShowAdvancedFilters(false);
+                }}
                 className={`bg-white p-4 rounded-lg shadow cursor-pointer transition ${
-                  filterStatus === stat.status ? "ring-2 ring-indigo-500" : ""
+                  filterStatus === stat.status && !advancedFilters
+                    ? "ring-2 ring-indigo-500"
+                    : ""
                 }`}
               >
                 <div className="text-sm text-gray-600">{stat.label}</div>
@@ -192,15 +321,47 @@ const Dashboard = () => {
           </div>
 
           {/* Search */}
-          <div className="mb-6">
+          <div className="mb-4">
             <input
               type="text"
               placeholder="Search by company or position..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              disabled={!!advancedFilters}
+              className={`w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                advancedFilters ? "bg-gray-100 cursor-not-allowed" : ""
+              }`}
             />
+            {advancedFilters && (
+              <p className="text-sm text-gray-500 mt-1">
+                Basic search disabled while advanced filters are active
+              </p>
+            )}
           </div>
+
+          {/* Advanced Filters Toggle */}
+          <div className="mb-4">
+            <button
+              onClick={() => setShowAdvancedFilters((prev) => !prev)}
+              className="text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+            >
+              {showAdvancedFilters ? "▼ Hide" : "▶ Show"} Advanced Filters
+              {advancedFilters && " ✓"}
+            </button>
+            {advancedFilters && (
+              <span className="ml-3 text-sm text-green-600 font-medium">
+                Active filters applied
+              </span>
+            )}
+          </div>
+
+          {/* Advanced Filters Component */}
+          {showAdvancedFilters && (
+            <AdvancedFilters
+              onApply={handleApplyAdvanced}
+              onReset={handleResetAdvanced}
+            />
+          )}
 
           {/* View Toggle */}
           <div className="flex justify-end mb-4">
@@ -221,36 +382,35 @@ const Dashboard = () => {
                   viewMode === "kanban"
                     ? "bg-indigo-600 text-white border-indigo-600"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                } rounded-r-lg`}
+                }`}
               >
                 Kanban
               </button>
               <button
                 onClick={() => {
-                  if (filterStatus === "ALL") {
+                  if (filterStatus === "ALL" && !advancedFilters) {
                     setViewMode("stats");
                   }
                 }}
-                disabled={filterStatus !== "ALL"}
+                disabled={filterStatus !== "ALL" || !!advancedFilters}
                 className={`px-4 py-2 text-sm font-medium border-t border-b border-r ${
                   viewMode === "stats"
                     ? "bg-indigo-600 text-white border-indigo-600"
-                    : filterStatus !== "ALL"
-                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed" // ✅ Grey when disabled
+                    : filterStatus !== "ALL" || advancedFilters
+                    ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
-                } rounded-r-lg transition-colors`}
+                } transition-colors`}
                 title={
-                  filterStatus !== "ALL"
-                    ? "Stats only available when viewing all applications"
+                  filterStatus !== "ALL" || advancedFilters
+                    ? "Stats only available when viewing all applications without filters"
                     : "View statistics"
                 }
               >
                 Stats
               </button>
-
               <button
                 onClick={() => setViewMode("interviews")}
-                className={`px-4 py-2 text-sm font-medium border ${
+                className={`px-4 py-2 text-sm font-medium border-t border-b border-r rounded-r-lg ${
                   viewMode === "interviews"
                     ? "bg-indigo-600 text-white border-indigo-600"
                     : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
@@ -280,11 +440,11 @@ const Dashboard = () => {
             </div>
           )}
 
-          {/* Applications List/Kanban/stats/ interviews */}
+          {/* Applications List/Kanban/Stats/Interviews */}
           {loading ? (
             <LoadingSkeleton />
           ) : filteredApplications.length === 0 ? (
-            searchQuery || filterStatus !== "ALL" ? (
+            searchQuery || filterStatus !== "ALL" || advancedFilters ? (
               <EmptyState
                 icon="🔍"
                 title="No matches found"
