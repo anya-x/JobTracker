@@ -11,6 +11,8 @@ import com.jobtracker.repository.JobApplicationRepository;
 import com.jobtracker.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
@@ -230,5 +232,10 @@ public class JobApplicationService {
         double responseRate = total > 0 ? (responded * 100.0 / total) : 0.0;
 
         return new ApplicationStatsDTO(total, statusCounts, active, responseRate);
+    }
+
+    public Page<JobApplicationDTO> getAllApplicationsPaginated(Pageable pageable) {
+        Page<JobApplication> page = applicationRepository.findAll(pageable);
+        return page.map(this::convertToDTO);
     }
 }

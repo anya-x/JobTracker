@@ -10,6 +10,7 @@ import EmptyState from "../components/EmptyState";
 import LoadingSkeleton from "../components/LoadingSkeleton";
 import AdvancedFilters from "../components/AdvancedFilters";
 import toast from "react-hot-toast";
+import Pagination from "../components/Pagination";
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
@@ -24,6 +25,10 @@ const Dashboard = () => {
   const [advancedFilters, setAdvancedFilters] = useState(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
 
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+
   useEffect(() => {
     fetchApplications();
   }, []);
@@ -32,13 +37,15 @@ const Dashboard = () => {
     filterApplications();
   }, [applications, filterStatus, searchQuery, advancedFilters]);
 
-  const fetchApplications = async () => {
+  const fetchApplications = async (page = 0) => {
     try {
-      const response = await api.get("/applications");
-      setApplications(response.data);
+      const response = await api.get(`/applications?page=${page}&size=21`);
+      setApplications(response.data.applications);
+      setCurrentPage(response.data.currentPage);
+      setTotalPages(response.data.totalPages);
+      setTotalItems(response.data.totalItems);
     } catch (err) {
       toast.error("Failed to load applications");
-      console.error("Failed to fetch applications:", err);
     } finally {
       setLoading(false);
     }
@@ -47,9 +54,7 @@ const Dashboard = () => {
   const filterApplications = () => {
     let filtered = applications;
 
-    // Apply basic filters only if advanced filters are not active
     if (!advancedFilters) {
-      // Basic status filter
       if (filterStatus !== "ALL") {
         if (filterStatus === "INTERVIEW") {
           filtered = filtered.filter(
@@ -63,7 +68,6 @@ const Dashboard = () => {
         }
       }
 
-      // Basic search
       if (searchQuery) {
         filtered = filtered.filter(
           (app) =>
@@ -73,25 +77,20 @@ const Dashboard = () => {
       }
     }
 
-    // Apply advanced filters (overrides basic filters)
     if (advancedFilters) {
-      // Status filter
       if (advancedFilters.status && advancedFilters.status !== "ALL") {
         filtered = filtered.filter(
           (app) => app.status === advancedFilters.status
         );
       }
 
-      // Date range filters - FIXED VERSION
       if (advancedFilters.startDate) {
         filtered = filtered.filter((app) => {
           if (!app.appliedDate) return false;
 
-          // Convert both dates to Date objects for proper comparison
           const appDate = new Date(app.appliedDate);
           const startDate = new Date(advancedFilters.startDate);
 
-          // Reset time to midnight for date-only comparison
           appDate.setHours(0, 0, 0, 0);
           startDate.setHours(0, 0, 0, 0);
 
@@ -103,19 +102,15 @@ const Dashboard = () => {
         filtered = filtered.filter((app) => {
           if (!app.appliedDate) return false;
 
-          // Convert both dates to Date objects for proper comparison
           const appDate = new Date(app.appliedDate);
           const endDate = new Date(advancedFilters.endDate);
 
-          // Reset time to midnight for date-only comparison
           appDate.setHours(0, 0, 0, 0);
           endDate.setHours(0, 0, 0, 0);
 
           return appDate <= endDate;
         });
       }
-
-      // Location filter
       if (advancedFilters.location) {
         filtered = filtered.filter(
           (app) =>
@@ -125,8 +120,6 @@ const Dashboard = () => {
               .includes(advancedFilters.location.toLowerCase())
         );
       }
-
-      // Priority filter
       if (advancedFilters.priority) {
         filtered = filtered.filter(
           (app) =>
@@ -134,23 +127,19 @@ const Dashboard = () => {
         );
       }
 
-      // Salary range filters
       if (advancedFilters.minSalary || advancedFilters.maxSalary) {
         filtered = filtered.filter((app) => {
           if (!app.salary) return false;
 
-          // Extract numbers from salary string (handles formats like "$100,000 - $120,000")
           const salaryNumbers = app.salary.match(/\d+/g);
           if (!salaryNumbers || salaryNumbers.length === 0) return false;
 
-          // Get the salary range from the string
           const minSalary = parseInt(salaryNumbers[0].replace(/,/g, ""));
           const maxSalary =
             salaryNumbers.length > 1
               ? parseInt(salaryNumbers[1].replace(/,/g, ""))
               : minSalary;
 
-          // Get filter bounds
           const filterMin = advancedFilters.minSalary
             ? parseInt(advancedFilters.minSalary)
             : 0;
@@ -158,7 +147,6 @@ const Dashboard = () => {
             ? parseInt(advancedFilters.maxSalary)
             : Infinity;
 
-          // Check if salary range overlaps with filter range
           return maxSalary >= filterMin && minSalary <= filterMax;
         });
       }
@@ -476,16 +464,33 @@ const Dashboard = () => {
               onDelete={handleDelete}
             />
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredApplications.map((app) => (
-                <ApplicationCard
-                  key={app.id}
-                  application={app}
-                  onEdit={handleEdit}
-                  onDelete={handleDelete}
-                />
-              ))}
-            </div>
+            <>
+              {/* Cards Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {filteredApplications.map((app) => (
+                  <ApplicationCard
+                    key={app.id}
+                    application={app}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                  />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              {viewMode === "cards" && totalPages > 1 && (
+                <div className="mt-6">
+                  <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={(page) => {
+                      setCurrentPage(page);
+                      fetchApplications(page);
+                    }}
+                  />
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
