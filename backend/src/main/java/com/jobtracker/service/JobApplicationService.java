@@ -13,12 +13,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import jakarta.persistence.criteria.Predicate;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -204,7 +207,8 @@ public class JobApplicationService {
     }
 
     public ApplicationStatsDTO getApplicationStats() {
-        List<JobApplication> allApps = applicationRepository.findAll();
+        User currentUser = getCurrentUser();
+        List<JobApplication> allApps = applicationRepository.findByUserId(currentUser.getId());
 
         long total = allApps.size();
 
@@ -235,7 +239,68 @@ public class JobApplicationService {
     }
 
     public Page<JobApplicationDTO> getAllApplicationsPaginated(Pageable pageable) {
-        Page<JobApplication> page = applicationRepository.findAll(pageable);
+        User currentUser = getCurrentUser();
+
+        Specification<JobApplication> spec = (root, query, cb) ->
+            cb.equal(root.get("user").get("id"), currentUser.getId());
+
+        Page<JobApplication> page = applicationRepository.findAll(spec, pageable);
+        return page.map(this::convertToDTO);
+    }
+
+    public Page<JobApplicationDTO> findByFilters(
+            ApplicationStatus status,
+            String location,
+            String search,
+            LocalDate startDate,
+            LocalDate endDate,
+            Integer priority,
+            Pageable pageable) {
+
+        User currentUser = getCurrentUser();
+
+        Specification<JobApplication> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            // Always filter by current user
+            predicates.add(cb.equal(root.get("user").get("id"), currentUser.getId()));
+
+            // Filter by status
+            if (status != null) {
+                predicates.add(cb.equal(root.get("status"), status));
+            }
+
+            // Filter by location (case-insensitive partial match)
+            if (location != null && !location.isEmpty()) {
+                predicates.add(cb.like(cb.lower(root.get("location")), "%" + location.toLowerCase() + "%"));
+            }
+
+            // Search in company name or position
+            if (search != null && !search.isEmpty()) {
+                Predicate companyNameMatch = cb.like(cb.lower(root.get("company").get("name")), "%" + search.toLowerCase() + "%");
+                Predicate positionMatch = cb.like(cb.lower(root.get("position")), "%" + search.toLowerCase() + "%");
+                predicates.add(cb.or(companyNameMatch, positionMatch));
+            }
+
+            // Filter by date range (appliedDate >= startDate)
+            if (startDate != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("appliedDate"), startDate));
+            }
+
+            // Filter by date range (appliedDate <= endDate)
+            if (endDate != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("appliedDate"), endDate));
+            }
+
+            // Filter by priority (priority >= specified value)
+            if (priority != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("priority"), priority));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<JobApplication> page = applicationRepository.findAll(spec, pageable);
         return page.map(this::convertToDTO);
     }
 }

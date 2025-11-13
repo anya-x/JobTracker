@@ -3,13 +3,14 @@ package com.jobtracker.repository;
 import com.jobtracker.model.ApplicationStatus;
 import com.jobtracker.model.JobApplication;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface JobApplicationRepository extends JpaRepository<JobApplication, Long> {
+public interface JobApplicationRepository extends JpaRepository<JobApplication, Long>, JpaSpecificationExecutor<JobApplication> {
 
     List<JobApplication> findByStatus(ApplicationStatus status);
 
@@ -29,5 +30,9 @@ public interface JobApplicationRepository extends JpaRepository<JobApplication, 
     List<JobApplication> findByUserIdAndStatus(Long userId, ApplicationStatus status);
     List<JobApplication> findByUserIdAndCompanyId(Long userId, Long companyId);
     Optional<JobApplication> findByIdAndUserId(Long id, Long userId);
+
+    // Count methods for stats
+    long countByUserId(Long userId);
+    long countByUserIdAndStatus(Long userId, ApplicationStatus status);
 
 }

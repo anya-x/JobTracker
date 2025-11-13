@@ -213,14 +213,20 @@ const KanbanBoard = ({ applications, onUpdate, onEdit, onDelete }) => {
       )}
 
       {/* Kanban Board */}
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div
+        className={`gap-4 pb-4 ${
+          visibleColumns.length <= 4
+            ? 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'
+            : 'flex overflow-x-auto'
+        }`}
+      >
         {visibleColumns.map((column) => {
           const columnApplications = getApplicationsForColumn(column.id);
 
           return (
             <div
               key={column.id}
-              className="flex-shrink-0 w-80"
+              className={visibleColumns.length <= 4 ? '' : 'flex-shrink-0 w-80'}
               onDragOver={handleDragOver}
               onDrop={(e) => handleDrop(e, column.id)}
             >

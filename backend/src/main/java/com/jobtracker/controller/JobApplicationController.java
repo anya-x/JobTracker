@@ -9,9 +9,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,13 +31,29 @@ public class JobApplicationController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "21") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(required = false) ApplicationStatus status,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) Integer priority) {
 
         Sort.Direction direction = sortDir.equalsIgnoreCase("asc") ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, size, Sort.by(direction, sortBy));
 
-        Page<JobApplicationDTO> pagedResult = applicationService.getAllApplicationsPaginated(pageable);
+        Page<JobApplicationDTO> pagedResult;
+
+        // Check if any filters are applied
+        boolean hasFilters = status != null || location != null || search != null ||
+                             startDate != null || endDate != null || priority != null;
+
+        if (hasFilters) {
+            pagedResult = applicationService.findByFilters(status, location, search, startDate, endDate, priority, pageable);
+        } else {
+            pagedResult = applicationService.getAllApplicationsPaginated(pageable);
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("applications", pagedResult.getContent());

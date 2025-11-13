@@ -15,7 +15,6 @@ import Pagination from "../components/Pagination";
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const [applications, setApplications] = useState([]);
-  const [filteredApplications, setFilteredApplications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingApplication, setEditingApplication] = useState(null);
@@ -29,17 +28,81 @@ const Dashboard = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [totalItems, setTotalItems] = useState(0);
 
+  // Stats state - separate from paginated applications
+  const [stats, setStats] = useState({
+    ALL: 0,
+    SAVED: 0,
+    APPLIED: 0,
+    INTERVIEW: 0,
+    OFFER: 0,
+  });
+
   useEffect(() => {
     fetchApplications();
+    fetchStats();
   }, []);
 
   useEffect(() => {
-    filterApplications();
-  }, [applications, filterStatus, searchQuery, advancedFilters]);
+    fetchApplications(0); // Reset to page 0 when filters change
+  }, [filterStatus, searchQuery, advancedFilters]);
+
+  const fetchStats = async () => {
+    try {
+      const response = await api.get("/applications/stats");
+      const statsData = response.data;
+
+      // Calculate stats from the response
+      const newStats = {
+        ALL: statsData.total || 0,
+        SAVED: statsData.statusCounts?.SAVED || 0,
+        APPLIED: statsData.statusCounts?.APPLIED || 0,
+        INTERVIEW:
+          (statsData.statusCounts?.INTERVIEW || 0) +
+          (statsData.statusCounts?.SCREENING || 0) +
+          (statsData.statusCounts?.PHONE_SCREEN || 0),
+        OFFER: statsData.statusCounts?.OFFER || 0,
+      };
+
+      setStats(newStats);
+    } catch (err) {
+      console.error("Failed to load stats:", err);
+    }
+  };
 
   const fetchApplications = async (page = 0) => {
     try {
-      const response = await api.get(`/applications?page=${page}&size=21`);
+      setLoading(true);
+      let url = `/applications?page=${page}&size=21`;
+
+      // Build query parameters based on active filters
+      if (advancedFilters) {
+        // Use advanced filters
+        if (advancedFilters.status && advancedFilters.status !== "ALL") {
+          url += `&status=${advancedFilters.status}`;
+        }
+        if (advancedFilters.location) {
+          url += `&location=${encodeURIComponent(advancedFilters.location)}`;
+        }
+        if (advancedFilters.startDate) {
+          url += `&startDate=${advancedFilters.startDate}`;
+        }
+        if (advancedFilters.endDate) {
+          url += `&endDate=${advancedFilters.endDate}`;
+        }
+        if (advancedFilters.priority) {
+          url += `&priority=${advancedFilters.priority}`;
+        }
+      } else {
+        // Use simple filters
+        if (filterStatus !== "ALL") {
+          url += `&status=${filterStatus}`;
+        }
+        if (searchQuery) {
+          url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+      }
+
+      const response = await api.get(url);
       setApplications(response.data.applications);
       setCurrentPage(response.data.currentPage);
       setTotalPages(response.data.totalPages);
@@ -49,110 +112,6 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterApplications = () => {
-    let filtered = applications;
-
-    if (!advancedFilters) {
-      if (filterStatus !== "ALL") {
-        if (filterStatus === "INTERVIEW") {
-          filtered = filtered.filter(
-            (app) =>
-              app.status === "INTERVIEW" ||
-              app.status === "SCREENING" ||
-              app.status === "PHONE_SCREEN"
-          );
-        } else {
-          filtered = filtered.filter((app) => app.status === filterStatus);
-        }
-      }
-
-      if (searchQuery) {
-        filtered = filtered.filter(
-          (app) =>
-            app.companyName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            app.position.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      }
-    }
-
-    if (advancedFilters) {
-      if (advancedFilters.status && advancedFilters.status !== "ALL") {
-        filtered = filtered.filter(
-          (app) => app.status === advancedFilters.status
-        );
-      }
-
-      if (advancedFilters.startDate) {
-        filtered = filtered.filter((app) => {
-          if (!app.appliedDate) return false;
-
-          const appDate = new Date(app.appliedDate);
-          const startDate = new Date(advancedFilters.startDate);
-
-          appDate.setHours(0, 0, 0, 0);
-          startDate.setHours(0, 0, 0, 0);
-
-          return appDate >= startDate;
-        });
-      }
-
-      if (advancedFilters.endDate) {
-        filtered = filtered.filter((app) => {
-          if (!app.appliedDate) return false;
-
-          const appDate = new Date(app.appliedDate);
-          const endDate = new Date(advancedFilters.endDate);
-
-          appDate.setHours(0, 0, 0, 0);
-          endDate.setHours(0, 0, 0, 0);
-
-          return appDate <= endDate;
-        });
-      }
-      if (advancedFilters.location) {
-        filtered = filtered.filter(
-          (app) =>
-            app.location &&
-            app.location
-              .toLowerCase()
-              .includes(advancedFilters.location.toLowerCase())
-        );
-      }
-      if (advancedFilters.priority) {
-        filtered = filtered.filter(
-          (app) =>
-            app.priority && app.priority >= parseInt(advancedFilters.priority)
-        );
-      }
-
-      if (advancedFilters.minSalary || advancedFilters.maxSalary) {
-        filtered = filtered.filter((app) => {
-          if (!app.salary) return false;
-
-          const salaryNumbers = app.salary.match(/\d+/g);
-          if (!salaryNumbers || salaryNumbers.length === 0) return false;
-
-          const minSalary = parseInt(salaryNumbers[0].replace(/,/g, ""));
-          const maxSalary =
-            salaryNumbers.length > 1
-              ? parseInt(salaryNumbers[1].replace(/,/g, ""))
-              : minSalary;
-
-          const filterMin = advancedFilters.minSalary
-            ? parseInt(advancedFilters.minSalary)
-            : 0;
-          const filterMax = advancedFilters.maxSalary
-            ? parseInt(advancedFilters.maxSalary)
-            : Infinity;
-
-          return maxSalary >= filterMin && minSalary <= filterMax;
-        });
-      }
-    }
-
-    setFilteredApplications(filtered);
   };
 
   const handleApplyAdvanced = (filters) => {
@@ -177,7 +136,8 @@ const Dashboard = () => {
     toast.success(
       editingApplication ? "Application updated!" : "Application created!"
     );
-    fetchApplications();
+    fetchApplications(currentPage);
+    fetchStats(); // Refresh stats after create/update
   };
 
   const handleEdit = (application) => {
@@ -190,24 +150,12 @@ const Dashboard = () => {
       try {
         await api.delete(`/applications/${id}`);
         toast.success("Application deleted");
-        fetchApplications();
+        fetchApplications(currentPage);
+        fetchStats(); // Refresh stats after delete
       } catch (err) {
         toast.error("Failed to delete application");
       }
     }
-  };
-
-  const statusCounts = {
-    ALL: applications.length,
-    SAVED: applications.filter((a) => a.status === "SAVED").length,
-    APPLIED: applications.filter((a) => a.status === "APPLIED").length,
-    INTERVIEW: applications.filter(
-      (a) =>
-        a.status === "INTERVIEW" ||
-        a.status === "SCREENING" ||
-        a.status === "PHONE_SCREEN"
-    ).length,
-    OFFER: applications.filter((a) => a.status === "OFFER").length,
   };
 
   return (
@@ -258,31 +206,31 @@ const Dashboard = () => {
             {[
               {
                 label: "Total",
-                value: statusCounts.ALL,
+                value: stats.ALL,
                 status: "ALL",
                 color: "blue",
               },
               {
                 label: "Saved",
-                value: statusCounts.SAVED,
+                value: stats.SAVED,
                 status: "SAVED",
                 color: "gray",
               },
               {
                 label: "Applied",
-                value: statusCounts.APPLIED,
+                value: stats.APPLIED,
                 status: "APPLIED",
                 color: "yellow",
               },
               {
                 label: "Interview",
-                value: statusCounts.INTERVIEW,
+                value: stats.INTERVIEW,
                 status: "INTERVIEW",
                 color: "purple",
               },
               {
                 label: "Offer",
-                value: statusCounts.OFFER,
+                value: stats.OFFER,
                 status: "OFFER",
                 color: "green",
               },
@@ -431,7 +379,7 @@ const Dashboard = () => {
           {/* Applications List/Kanban/Stats/Interviews */}
           {loading ? (
             <LoadingSkeleton />
-          ) : filteredApplications.length === 0 ? (
+          ) : applications.length === 0 ? (
             searchQuery || filterStatus !== "ALL" || advancedFilters ? (
               <EmptyState
                 icon="🔍"
@@ -458,8 +406,11 @@ const Dashboard = () => {
             <Charts applications={applications} />
           ) : viewMode === "kanban" ? (
             <KanbanBoard
-              applications={filteredApplications}
-              onUpdate={fetchApplications}
+              applications={applications}
+              onUpdate={() => {
+                fetchApplications(currentPage);
+                fetchStats();
+              }}
               onEdit={handleEdit}
               onDelete={handleDelete}
             />
@@ -467,7 +418,7 @@ const Dashboard = () => {
             <>
               {/* Cards Grid */}
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredApplications.map((app) => (
+                {applications.map((app) => (
                   <ApplicationCard
                     key={app.id}
                     application={app}
